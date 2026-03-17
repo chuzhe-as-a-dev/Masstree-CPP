@@ -7,9 +7,9 @@
 VARIANTS=("fullatomic")
 # VARIANTS=("beta")
 
-# CONFIGS=("debug" "release")
+CONFIGS=("debug" "release")
 # CONFIGS=("release")
-CONFIGS=("debug")
+# CONFIGS=("debug")
 
 #	TODO: produce asm
 CXXFLAGS_BASE="-g -W -Wall -std=c++20 -pthread "

@@ -16,25 +16,38 @@ Masstree is tested on Debian, Ubuntu and Mac OS X. To build from
 source:
 
     $ ./bootstrap.sh
-    $ ./configure
-    $ make
+    $ bash configure-all.sh
+    $ make -C build/fullatomic-debug
 
-For performance measurements, you should disable assertions.
+`configure-all.sh` performs an out-of-root build and creates one or more
+build directories under `build/`, such as `build/fullatomic-debug` and
+`build/fullatomic-release`. The exact directories depend on the
+`VARIANTS` and `CONFIGS` arrays in `configure-all.sh`.
 
-    $ ./configure --disable-assertions
+If you configure both debug and release builds, you can build the
+release configuration with:
+
+    $ make -C build/fullatomic-release
+
+For performance measurements, prefer the release build.
 
 Masstree needs a fast malloc, and can link with jemalloc, Google’s
 tcmalloc, Hoard, or our own Flow allocator. It will normally choose
 jemalloc or tcmalloc, if it finds them. To use a specific memory
 allocator:
 
-    ./configure --with-malloc=<jemalloc|tcmalloc|flow|hoard>
+Pass the desired option through the `configure` invocation inside
+`configure-all.sh`, for example:
+
+    ../../configure CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
+        --with-malloc=<jemalloc|tcmalloc|flow|hoard> $CONFIGFLAGS
 
 Flow is our re-implementation of
 [Streamflow](http://people.cs.vt.edu/~scschnei/streamflow/) allocator,
 and may be open-sourced in future.
 
-See `./configure --help` for more configure options.
+See `./configure --help` for other configure options you may want to add
+to that command in `configure-all.sh`.
 
 ## Testing
 
@@ -116,7 +129,7 @@ example, after `./mttest`, `notebook-mttest.json` will contain:
 }
 ```
 
-Run `./mttest --help` for a list of tests and options.
+Run `build/fullatomic-debug/mttest --help` for a list of tests and options.
 
 ## Network testing
 
@@ -126,7 +139,7 @@ sends queries to a Masstree server over the network.
 To start the Masstree server, run:
 
 ```
-$ ./mtd --logdir=[LOG_DIRS] --ckdir=[CHECKPOINT_DIRS]
+$ build/fullatomic-debug/mtd --logdir=[LOG_DIRS] --ckdir=[CHECKPOINT_DIRS]
 mb, Bag, pin-threads disabled, logging enabled
 no ./kvd-ckp-gen
 no ./kvd-ckp-0-0
@@ -147,7 +160,7 @@ To run the `rw1` workload with `mtclient` on the same machine as
 `mtd`, run:
 
 ```
-$ ./mtclient -s 127.0.0.1 rw1
+$ build/fullatomic-debug/mtclient -s 127.0.0.1 rw1
 tcp, w 500, test rw1, children 2
 0 now getting
 1 now getting

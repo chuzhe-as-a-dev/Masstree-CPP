@@ -59,7 +59,7 @@ $(ASMDIR)/%.s: $(SRCDIR)/% $(ASMDIR)/stamp
 all: test_atomics mtd mtclient mttest $(ASMFILES) $(ASMDIR)/objdump_mttest.txt
 
 $(ASMDIR)/objdump_mttest.txt: mttest $(ASMDIR)/stamp
-	objdump -d --source-comment ./mttest > $(ASMDIR)/objdump_mttest.txt
+	objdump -d ./mttest > $(ASMDIR)/objdump_mttest.txt
 
 %.o: %.c config.h $(DEPSDIR)/stamp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(DEPCFLAGS) -include config.h -c -o $@ $<

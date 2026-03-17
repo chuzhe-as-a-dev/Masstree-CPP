@@ -23,8 +23,11 @@
 #include <type_traits>
 #endif
 #include <atomic>
+#include <chrono>
 #include <thread>
+#if defined(__i386__) || defined(__x86_64__)
 #include <immintrin.h>
+#endif
 #include <cstring>
 
 #define arraysize(a) (sizeof(a) / sizeof((a)[0]))
@@ -665,12 +668,20 @@ inline void atomic_signal_release_fence() {
     std::atomic_signal_fence(MO_RELEASE);
 }
 
+inline void relax_fence_pause_hint() {
+#if defined(__i386__) || defined(__x86_64__)
+    _mm_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+    asm volatile("yield" ::: "memory");
+#endif
+}
+
 inline void atomic_signal_relax_fence() {
     // fprintf(stderr, "relax_fence()\n");
 #if defined(RELAX_FENCE_SCHED_YIELD)
     std::this_thread::yield();
 #elif defined(RELAX_FENCE_PAUSE)
-    _mm_pause();
+    relax_fence_pause_hint();
 #endif
     std::atomic_signal_fence(MO_ACQ_REL);
 }
@@ -698,7 +709,7 @@ inline void atomic_thread_relax_fence() {
 #if defined(RELAX_FENCE_SCHED_YIELD)
     std::this_thread::yield();
 #elif defined(RELAX_FENCE_PAUSE)
-    _mm_pause();
+    relax_fence_pause_hint();
 #endif
     std::atomic_thread_fence(MO_ACQ_REL);
 }
@@ -788,7 +799,8 @@ inline void release_fence() {
 
     Use this in spinloops, for example. */
 inline void relax_fence() {
-    asm volatile("pause" : : : "memory"); // equivalent to "rep; nop"
+    relax_fence_pause_hint();
+    asm volatile("" : : : "memory");
 }
 
 /** @brief Full memory fence. */
@@ -843,10 +855,14 @@ template <int SIZE, typename BARRIER> struct sized_compiler_operations;
 template <typename B> struct sized_compiler_operations<1, B> {
     typedef char type;
     static inline type xchg(type* object, type new_value) {
+#if __x86__
         asm volatile("xchgb %0,%1"
                      : "+q" (new_value), "+m" (*object));
         B()();
         return new_value;
+#else
+        return __sync_lock_test_and_set(object, new_value);
+#endif
     }
     static inline type val_cmpxchg(type* object, type expected, type desired) {
 #if __x86__ && (PREFER_X86 || !HAVE___SYNC_VAL_COMPARE_AND_SWAP)
@@ -899,10 +915,14 @@ template <typename B> struct sized_compiler_operations<2, B> {
     typedef int16_t type;
 #endif
     static inline type xchg(type* object, type new_value) {
+#if __x86__
         asm volatile("xchgw %0,%1"
                      : "+r" (new_value), "+m" (*object));
         B()();
         return new_value;
+#else
+        return __sync_lock_test_and_set(object, new_value);
+#endif
     }
     static inline type val_cmpxchg(type* object, type expected, type desired) {
 #if __x86__ && (PREFER_X86 || !HAVE___SYNC_VAL_COMPARE_AND_SWAP)
@@ -955,10 +975,14 @@ template <typename B> struct sized_compiler_operations<4, B> {
     typedef int32_t type;
 #endif
     static inline type xchg(type* object, type new_value) {
+#if __x86__
         asm volatile("xchgl %0,%1"
                      : "+r" (new_value), "+m" (*object));
         B()();
         return new_value;
+#else
+        return __sync_lock_test_and_set(object, new_value);
+#endif
     }
     static inline type val_cmpxchg(type* object, type expected, type desired) {
 #if __x86__ && (PREFER_X86 || !HAVE___SYNC_VAL_COMPARE_AND_SWAP)
@@ -1012,14 +1036,16 @@ template <typename B> struct sized_compiler_operations<8, B> {
 #else
     typedef int64_t type;
 #endif
-#if __x86_64__
     static inline type xchg(type* object, type new_value) {
+#if __x86_64__
         asm volatile("xchgq %0,%1"
                      : "+r" (new_value), "+m" (*object));
         B()();
         return new_value;
-    }
+#else
+        return __sync_lock_test_and_set(object, new_value);
 #endif
+    }
     static inline type val_cmpxchg(type* object, type expected, type desired) {
 #if __x86_64__ && (PREFER_X86 || !HAVE___SYNC_VAL_COMPARE_AND_SWAP_8)
         asm volatile("lock; cmpxchgq %2,%1"
@@ -1270,8 +1296,7 @@ inline void prefetch(const void *ptr) {
 #ifdef NOPREFETCH
     (void) ptr;
 #else
-    typedef struct { char x[CACHE_LINE_SIZE]; } cacheline_t;
-    asm volatile("prefetcht0 %0" : : "m" (*(const cacheline_t *)ptr));
+    __builtin_prefetch(ptr, 0, 3);
 #endif
 }
 #endif
@@ -1280,8 +1305,7 @@ inline void prefetchnta(const void *ptr) {
 #ifdef NOPREFETCH
     (void) ptr;
 #else
-    typedef struct { char x[CACHE_LINE_SIZE]; } cacheline_t;
-    asm volatile("prefetchnta %0" : : "m" (*(const cacheline_t *)ptr));
+    __builtin_prefetch(ptr, 0, 0);
 #endif
 }
 
@@ -1314,9 +1338,11 @@ inline uint64_t ntohq(uint64_t val) {
     asm("bswapl %0; bswapl %1; xchgl %0,%1"
         : "+r" (v.s.a), "+r" (v.s.b));
     return v.u;
-#else /* __i386__ */
+#elif defined(__x86_64__)
     asm("bswapq %0" : "+r" (val));
     return val;
+#else
+    return __builtin_bswap64(val);
 #endif
 }
 
@@ -1662,18 +1688,25 @@ inline T read_in_net_order(const uint8_t* s) {
     return read_in_net_order<T>(reinterpret_cast<const char*>(s));
 }
 
-
+#if __x86__
 inline uint64_t read_pmc(uint32_t ecx) {
     uint32_t a, d;
     __asm __volatile("rdpmc" : "=a"(a), "=d"(d) : "c"(ecx));
     return ((uint64_t)a) | (((uint64_t)d) << 32);
 }
+#else
+uint64_t read_pmc(uint32_t) = delete;
+#endif
 
 inline uint64_t read_tsc(void)
 {
+#if __x86__
     uint32_t low, high;
     asm volatile("rdtsc" : "=a" (low), "=d" (high));
     return ((uint64_t)low) | (((uint64_t)high) << 32);
+#else
+    return std::chrono::steady_clock::now().time_since_epoch().count();
+#endif
 }
 
 template <typename T>
