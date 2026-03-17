@@ -1369,7 +1369,7 @@ hashcode_t String_generic_templated<T,U>::hashcode(const T *s, int len)
 #undef get16
 #if !HAVE_INDIFFERENT_ALIGNMENT
     } else {
-# if !__i386__ && !__x86_64__ && !__arch_um__
+# if WORDS_BIGENDIAN
 #  define get16(p) (((unsigned char) (p)[0] << 8) + (unsigned char) (p)[1])
 # else
 #  define get16(p) ((unsigned char) (p)[0] + ((unsigned char) (p)[1] << 8))
@@ -2515,7 +2515,7 @@ hashcode_t String_generic_templated<T,U>::hashcode(T s, int len)
 #undef get16
 #if !HAVE_INDIFFERENT_ALIGNMENT
     } else {
-# if !__i386__ && !__x86_64__ && !__arch_um__
+# if WORDS_BIGENDIAN
 #  define get16(p) (((unsigned char) (p)[0] << 8) + (unsigned char) (p)[1])
 # else
 #  define get16(p) ((unsigned char) (p)[0] + ((unsigned char) (p)[1] << 8))
