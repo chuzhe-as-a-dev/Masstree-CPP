@@ -52,13 +52,19 @@
 #define PRIdSSIZE_T "d"
 #endif
 
-#if (__i386__ || __x86_64__) && !defined(__x86__)
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(__x86__)
 # define __x86__ 1
 #endif
-#define PREFER_X86 1
+#ifdef __x86__
+# define PREFER_X86 1
+#else
+# define PREFER_X86 0
+#endif
 #define ALLOW___SYNC_BUILTINS 1
 
-#if !defined(HAVE_INDIFFERENT_ALIGMENT) && (__i386__ || __x86_64__ || __arch_um__)
+#if !defined(HAVE_INDIFFERENT_ALIGNMENT) && !defined(HAVE_INDIFFERENT_ALIGMENT) \
+    && (defined(__i386__) || defined(__x86_64__) || defined(__arch_um__)       \
+        || defined(__aarch64__) || defined(__ARM_FEATURE_UNALIGNED))
 # define HAVE_INDIFFERENT_ALIGNMENT 1
 #endif
 
@@ -805,7 +811,7 @@ inline void relax_fence() {
 
 /** @brief Full memory fence. */
 inline void memory_fence() {
-    asm volatile("mfence" : : : "memory");
+    std::atomic_thread_fence(MO_SEQ_CST);
 }
 #endif
 
@@ -1063,6 +1069,11 @@ template <typename B> struct sized_compiler_operations<8, B> {
         return ((uint64_t) expected_high << 32) | expected_low;
 #elif HAVE___SYNC_VAL_COMPARE_AND_SWAP_8
         return __sync_val_compare_and_swap(object, expected, desired);
+#else
+        std::atomic_ref<type> ref(*object);
+        ref.compare_exchange_strong(expected, desired, MO_SEQ_CST, MO_SEQ_CST);
+        B()();
+        return expected;
 #endif
     }
     static inline bool bool_cmpxchg(type* object, type expected, type desired) {
@@ -1075,7 +1086,7 @@ template <typename B> struct sized_compiler_operations<8, B> {
                      : "r" (desired) : "cc");
         B()();
         return result;
-#else
+#elif __i386__
         uint32_t expected_low(expected), expected_high(expected >> 32),
             desired_low(desired), desired_high(desired >> 32);
         bool result;
@@ -1083,6 +1094,12 @@ template <typename B> struct sized_compiler_operations<8, B> {
                      : "+a" (expected_low), "+d" (expected_high),
                        "+m" (*object), "=q" (result)
                      : "b" (desired_low), "c" (desired_high) : "cc");
+        B()();
+        return result;
+#else
+        std::atomic_ref<type> ref(*object);
+        bool result = ref.compare_exchange_strong(expected, desired,
+                                                  MO_SEQ_CST, MO_SEQ_CST);
         B()();
         return result;
 #endif
