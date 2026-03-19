@@ -13,11 +13,11 @@ CONFIGS=("debug" "release")
 
 #	TODO: produce asm
 CXXFLAGS_BASE="-g -W -Wall -std=c++20 -pthread "
-CXXFLAGS_DEBUG="-O0 -fsanitize=thread "
+CXXFLAGS_DEBUG="-O0 "  # -fsanitize=thread (commented out as ./configure would fail)
 CXXFLAGS_RELEASE="-O3 "
 
 LDFLAGS_BASE=""
-LDFLAGS_DEBUG="-fsanitize=thread "
+LDFLAGS_DEBUG=""  # -fsanitize=thread (commented out as ./configure would fail)
 LDFLAGS_RELEASE=""
 
 CONFIGFLAGS_BASE=""
