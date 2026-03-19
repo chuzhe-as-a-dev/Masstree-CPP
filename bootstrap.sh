@@ -2,4 +2,4 @@
 
 autoreconf -i
 
-echo "Now, run ./configure."
+echo "Now, run bash configure-all.sh"
