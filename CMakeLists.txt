@@ -343,20 +343,19 @@ endif()
 # ---------------------------------------------------------------------------
 if(MASSTREE_BUILD_TESTS)
   # mttest and mtclient pull in testrunner.cc (testrunner_base globals).
-  # scantest.cc and test_string.cc are pre-existing broken upstream (missing
-  # `active_epoch` TU-level global, and stale references to an `Encoding`
-  # helper that was never ported), so they're omitted here.
   add_executable(mttest          mttest.cc      testrunner.cc)
   add_executable(mtclient        mtclient.cc    testrunner.cc)
   add_executable(mtd             mtd.cc)
   add_executable(jsontest        jsontest.cc)
   add_executable(msgpacktest     msgpacktest.cc)
+  add_executable(scantest        scantest.cc)
   add_executable(test_atomics    test_atomics.cc)
   add_executable(test_atomic_str test_atomic_str.cc)
+  add_executable(test_string     test_string.cc)
   add_executable(unit-mt         unit-mt.cc)
 
-  foreach(_tgt mttest mtd mtclient jsontest msgpacktest
-               test_atomics test_atomic_str unit-mt)
+  foreach(_tgt mttest mtd mtclient jsontest msgpacktest scantest
+               test_atomics test_atomic_str test_string unit-mt)
     target_link_libraries(${_tgt} PRIVATE masstree::masstree)
   endforeach()
 
@@ -367,7 +366,8 @@ if(MASSTREE_BUILD_TESTS)
   if(PROJECT_IS_TOP_LEVEL)
     enable_testing()
   endif()
-  foreach(_t unit-mt test_atomics test_atomic_str jsontest msgpacktest)
+  foreach(_t unit-mt scantest test_atomics test_atomic_str test_string
+             jsontest msgpacktest)
     add_test(NAME ${_t} COMMAND ${_t})
   endforeach()
 endif()

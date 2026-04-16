@@ -22,28 +22,13 @@
 
 using namespace lcdf;
 
-template <typename T>
-static bool
-check_straccum_utf8(StringAccum &sa, const char *in, int inlen,
-                    const char *out, int outlen)
-{
-    sa.clear();
-    Encoding::UTF8Encoder<T> encoder;
-    sa.append_encoded(encoder, in, in + inlen);
-    return sa.length() == outlen && memcmp(sa.begin(), out, sa.length()) == 0;
-}
-
-template <typename T>
-static bool
-check_straccum2_utf8(StringAccum &sa, const char *in, int inlen,
-                     const char *out, int outlen)
-{
-    sa.clear();
-    memcpy(sa.reserve(inlen), in, inlen);
-    Encoding::UTF8Encoder<T> encoder;
-    sa.append_encoded(encoder, sa.begin(), sa.begin() + inlen);
-    return sa.length() == outlen && memcmp(sa.begin(), out, sa.length()) == 0;
-}
+// NOTE: this file used to contain additional `check_straccum_utf8<T>` /
+// `check_straccum2_utf8<T>` helpers that exercised `Encoding::UTF8Encoder<T>`
+// with `Encoding::UTF8`, `Encoding::UTF8NoNul`, and `Encoding::Windows1252`
+// tag types. Those streaming-encoder classes were never ported to
+// masstree-cpp (only the member `String::to_utf8()` family survived), so the
+// helpers could not compile. They were removed rather than stubbed so this
+// binary once again exercises what the port actually provides.
 
 int
 main(int argc, char *argv[])
@@ -56,21 +41,6 @@ main(int argc, char *argv[])
     assert(String("\xc3\x9dHi!\x9c").to_utf8() == "\xc3\x9dHi!\xc5\x93");
     assert(String("ab\000c\x9c", 5).to_utf8() == "abc\xc5\x93");
     assert(String("\xc3\x9dXY\000c\x9c", 7).to_utf8() == "\xc3\x9dXYc\xc5\x93");
-
-    StringAccum sa;
-    check_straccum_utf8<Encoding::UTF8>(sa, "abc", 3, "abc", 3);
-    check_straccum_utf8<Encoding::UTF8>(sa, "", 0, "", 0);
-    check_straccum_utf8<Encoding::UTF8>(sa, "ab\000cd", 5, "ab\000cd", 5);
-    check_straccum_utf8<Encoding::UTF8NoNul>(sa, "ab\000cd", 5, "abcd", 4);
-    check_straccum_utf8<Encoding::UTF8>(sa, "\xc3\x9dHi!", 5, "\xc3\x9dHi!", 5);
-    check_straccum_utf8<Encoding::Windows1252>(sa, "\xddHi!", 4, "\xc3\x9dHi!", 5);
-
-    check_straccum2_utf8<Encoding::UTF8>(sa, "abc", 3, "abc", 3);
-    check_straccum2_utf8<Encoding::UTF8>(sa, "", 0, "", 0);
-    check_straccum2_utf8<Encoding::UTF8>(sa, "ab\000cd", 5, "ab\000cd", 5);
-    check_straccum2_utf8<Encoding::UTF8NoNul>(sa, "ab\000cd", 5, "abcd", 4);
-    check_straccum2_utf8<Encoding::UTF8>(sa, "\xc3\x9dHi!", 5, "\xc3\x9dHi!", 5);
-    check_straccum2_utf8<Encoding::Windows1252>(sa, "\xddHi!", 4, "\xc3\x9dHi!", 5);
 
     if (argc == 2) {
         FILE *f;
@@ -88,4 +58,6 @@ main(int argc, char *argv[])
         String s = sa.take_string().to_utf8(String::utf_strip_bom);
         fwrite(s.data(), 1, s.length(), stdout);
     }
+    fprintf(stderr, "test_string: all assertions passed\n");
+    return 0;
 }
