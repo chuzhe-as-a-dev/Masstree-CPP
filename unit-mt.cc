@@ -154,8 +154,7 @@ __thread typename MasstreeWrapper::table_params::threadinfo_type* MasstreeWrappe
 bool MasstreeWrapper::stopping = false;
 uint32_t MasstreeWrapper::printing = 0;
 
-relaxed_atomic<mrcu_epoch_type> active_epoch = 1;
-relaxed_atomic<mrcu_epoch_type> globalepoch = 1;
+// globalepoch / active_epoch now live in the masstree library (kvthread.cc).
 volatile bool recovering = false;
 
 void test_thread(MasstreeWrapper* mt, int thread_id) {

@@ -14,6 +14,8 @@
  * is legally binding.
  */
 #include "kvthread.hh"
+#include "log.hh"
+#include "timestamp.hh"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +25,17 @@
 #include <sys/types.h>
 #include <dirent.h>
 #endif
+
+// Canonical definitions of the masstree globals. Programs used to define
+// these per-TU; that was repetitive and easy to get out of sync. Placing
+// them here guarantees every binary that links masstree — directly or
+// transitively — sees one consistent copy. kvthread.cc is always pulled
+// from the static archive since any masstree user calls threadinfo methods.
+relaxed_atomic<mrcu_epoch_type> globalepoch(1);
+relaxed_atomic<mrcu_epoch_type> active_epoch(1);
+kvepoch_t global_log_epoch(0);
+kvepoch_t global_wake_epoch(0);
+kvtimestamp_t initial_timestamp;
 
 threadinfo *threadinfo::allthreads;
 #if ENABLE_ASSERTIONS

@@ -2,11 +2,9 @@
 
 using namespace Masstree;
 
-kvepoch_t global_log_epoch = 0;
-relaxed_atomic<mrcu_epoch_type> globalepoch = 1; // global epoch, updated by main thread regularly
-relaxed_atomic<mrcu_epoch_type> active_epoch = 1; // most advanced epoch any thread has observed
+// globalepoch / active_epoch / global_log_epoch / initial_timestamp now
+// live in the masstree library (kvthread.cc).
 relaxed_atomic<bool> recovering = false; // so don't add log entries, and free old value immediately
-kvtimestamp_t initial_timestamp;
 
 int
 main(int argc, char *argv[])

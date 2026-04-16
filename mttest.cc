@@ -78,9 +78,8 @@ static bool json_stats = false;
 static String gnuplot_yrange;
 static bool pinthreads = false;
 static nodeversion32 global_epoch_lock(false);
-relaxed_atomic<mrcu_epoch_type> globalepoch(1);     // global epoch, updated by main thread regularly
-relaxed_atomic<mrcu_epoch_type> active_epoch(1);
-kvepoch_t global_log_epoch = 0;
+// globalepoch / active_epoch / global_log_epoch now live in the masstree
+// library (kvthread.cc) — no per-program definition needed.
 static int port = 2117;
 static int rscale_ncores = 0;
 
@@ -93,7 +92,6 @@ std::vector<mttest_numainfo> numa;
 #endif
 
 volatile bool recovering = false; // so don't add log entries, and free old value immediately
-kvtimestamp_t initial_timestamp;
 
 static const char *threadcounter_names[(int) tc_max];
 

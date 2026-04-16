@@ -75,8 +75,7 @@ static std::vector<int> cores;
 static bool logging = true;
 static bool pinthreads = false;
 static bool recovery_only = false;
-relaxed_atomic<mrcu_epoch_type> globalepoch(1);     // global epoch, updated by main thread regularly
-relaxed_atomic<mrcu_epoch_type> active_epoch(1);
+// globalepoch / active_epoch now live in the masstree library (kvthread.cc).
 static int port = 2117;
 static uint64_t test_limit = ~uint64_t(0);
 static int doprint = 0;
@@ -99,7 +98,7 @@ pthread_mutex_t rec_mu;
 static int rec_nactive;
 static int rec_state = REC_NONE;
 
-kvtimestamp_t initial_timestamp;
+// initial_timestamp lives in the masstree library (kvthread.cc).
 
 static pthread_cond_t checkpoint_cond;
 static pthread_mutex_t checkpoint_mu;

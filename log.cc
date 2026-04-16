@@ -31,8 +31,8 @@
 
 using lcdf::String;
 
-kvepoch_t global_log_epoch;
-kvepoch_t global_wake_epoch;
+// global_log_epoch / global_wake_epoch now live in kvthread.cc alongside
+// globalepoch / active_epoch / initial_timestamp.
 struct timeval log_epoch_interval;
 static struct timeval log_epoch_time;
 extern Masstree::default_table* tree;
