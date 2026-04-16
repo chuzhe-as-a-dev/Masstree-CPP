@@ -359,6 +359,17 @@ if(MASSTREE_BUILD_TESTS)
                test_atomics test_atomic_str unit-mt)
     target_link_libraries(${_tgt} PRIVATE masstree::masstree)
   endforeach()
+
+  # Register unattended pass/fail tests with ctest.
+  # Exclusions:
+  #   - mttest    — 20-second benchmark, not a pass/fail test.
+  #   - mtd / mtclient — need coordinated launch; not suitable for `ctest`.
+  if(PROJECT_IS_TOP_LEVEL)
+    enable_testing()
+  endif()
+  foreach(_t unit-mt test_atomics test_atomic_str jsontest msgpacktest)
+    add_test(NAME ${_t} COMMAND ${_t})
+  endforeach()
 endif()
 
 # ---------------------------------------------------------------------------
