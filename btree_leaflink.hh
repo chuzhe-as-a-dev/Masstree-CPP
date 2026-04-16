@@ -85,8 +85,12 @@ template <typename N> struct btree_leaflink<N, true> {
         N *prev;
         while (1) {
             prev = n->prev_;
-            // if (bool_cmpxchg(&prev->next_, n, mark(n)))
-            if (prev->next_.compare_exchange_weak(n, mark(n)))
+            // std::atomic::compare_exchange_weak takes `expected` by reference
+            // and OVERWRITES it on failure (including spurious failure on
+            // LL/SC platforms like ARM). Use a throwaway local so a failed
+            // CAS doesn't clobber `n` — the next iteration needs `n->prev_`.
+            N *expected = n;
+            if (prev->next_.compare_exchange_weak(expected, mark(n)))
                 break;
             spin_function();
         }
