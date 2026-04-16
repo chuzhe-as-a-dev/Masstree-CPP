@@ -568,14 +568,23 @@ class nodeversion {
     }
 
     bool has_changed(value_type x) const {
-        atomic_signal_fence();
+        // Must be a true memory barrier, not just a compiler fence: readers
+        // compare their cached `x` against the current `v_` to decide whether
+        // to retry. On weakly-ordered architectures (ARM64) a signal-only
+        // fence lets the load of v_ be satisfied by a stale cache line, so
+        // concurrent version bumps (e.g. an internode split) can go
+        // undetected and the cursor keeps running with stale navigation
+        // results. The matching ATOMICALLFENCES variant at line 304 already
+        // uses atomic_fence() — follow the same rule here.
+        atomic_fence();
         return (x ^ v_.load()) > P::lock_bit;
     }
     bool is_root() const {
         return v_.load() & P::root_bit;
     }
     bool has_split(value_type x) const {
-        atomic_signal_fence();
+        // See has_changed above — needs a real memory barrier on ARM.
+        atomic_fence();
         return (x ^ v_.load()) >= P::vsplit_lowbit;
     }
     bool simple_has_split(value_type x) const {
@@ -672,32 +681,41 @@ class nodeversion {
 
     void mark_insert() {
         masstree_invariant(locked());
+        // Release fence: the dirty-bit store above must be ordered BEFORE
+        // the caller's subsequent field writes (lv_, keylenx_, ikey0_, ...).
+        // Otherwise, on a weakly-ordered machine (ARM), another CPU can see
+        // the field writes WITHOUT ever observing the dirty bit, so its
+        // stable_annotated() spin and has_changed() retry never trigger,
+        // and it consumes torn state. The original code used
+        // atomic_signal_acquire_fence() here, which is doubly wrong: it's
+        // (a) signal-only, so it doesn't act on the CPU at all, and
+        // (b) acquire-direction, but what we need is the release direction
+        // (publish prior store before subsequent stores). x86 hid the bug
+        // because TSO already orders store-store for free.
         v_.store(v_.load() | P::inserting_bit);
-        atomic_signal_acquire_fence();
+        atomic_release_fence();
     }
 
     void mark_insert(value_type current_version) {
         masstree_invariant((atomic_fence(), v_.load() == current_version));
         masstree_invariant(current_version & P::lock_bit);
-        // v_ = (current_version.v_ |= P::inserting_bit);
-        // v_.store(current_version.v_.fetch_and_or(P::inserting_bit) | P::inserting_bit);
-        // nodeversion<P> marked = current_version.v_.store.load() | P::inserting_bit;
-        // current_version.v_.store(marked);
         current_version |= P::inserting_bit;
         v_.store(current_version);
-        atomic_signal_acquire_fence();
-        // return current_version;
+        // See mark_insert() above — needs a release fence on ARM.
+        atomic_release_fence();
     }
     void mark_split() {
         masstree_invariant(locked());
         v_.store(v_.load() | P::splitting_bit);
-        atomic_signal_acquire_fence();
+        // See mark_insert() above — needs a release fence on ARM.
+        atomic_release_fence();
     }
     void mark_change(bool is_split) {
         masstree_invariant(locked());
         v_.fetch_and_or((is_split + 1) << P::inserting_shift);
         v_.store(v_.load() | (is_split + 1) << P::inserting_shift);
-        atomic_signal_acquire_fence();
+        // See mark_insert() above — needs a release fence on ARM.
+        atomic_release_fence();
     }
     // nodeversion<P> mark_deleted() {
     void mark_deleted() {
