@@ -45,21 +45,12 @@
 #ifdef __linux__
 #include <malloc.h>
 #endif
-#include "nodeversion.hh"
-#include "kvstats.hh"
-#include "json.hh"
-#include "kvtest.hh"
-#include "kvrandom.hh"
+#include <masstree/all.hh>
 #include "clp.h"
 #include "log.hh"
 #include "checkpoint.hh"
 #include "file.hh"
 #include "kvproto.hh"
-#include "query_masstree.hh"
-#include "masstree_tcursor.hh"
-#include "masstree_insert.hh"
-#include "masstree_remove.hh"
-#include "masstree_scan.hh"
 #include "msgpack.hh"
 #include <algorithm>
 #include <deque>

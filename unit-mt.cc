@@ -5,16 +5,7 @@
 
 #include <pthread.h>
 
-#include "compiler.hh"
-
-#include "masstree.hh"
-#include "kvthread.hh"
-#include "masstree_tcursor.hh"
-#include "masstree_insert.hh"
-#include "masstree_print.hh"
-#include "masstree_remove.hh"
-#include "masstree_scan.hh"
-#include "masstree_stats.hh"
+#include <masstree/all.hh>
 #include "string.hh"
 
 #define NUM_THREADS 64

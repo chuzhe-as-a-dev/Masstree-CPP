@@ -1,8 +1,9 @@
 #pragma once
 
-// Convenience umbrella header: matches the layout of masstree-beta's
-// original all.hh so downstream consumers that include
-// <masstree/all.hh> get the complete public surface area.
+// Convenience umbrella header covering the full public surface most
+// consumers (including the in-tree mttest / mtd / mtclient / unit-mt
+// programs) want. Narrower consumers can still include the individual
+// headers directly.
 
 #include <nodeversion.hh>
 #include <kvstats.hh>
@@ -11,6 +12,8 @@
 #include <masstree_insert.hh>
 #include <masstree_remove.hh>
 #include <masstree_scan.hh>
+#include <masstree_print.hh>
+#include <masstree_stats.hh>
 #include <timestamp.hh>
 #include <json.hh>
 #include <kvtest.hh>

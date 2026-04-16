@@ -35,12 +35,8 @@
 #include <arpa/inet.h>
 #include <math.h>
 #include <fcntl.h>
-#include "kvstats.hh"
-#include "kvio.hh"
-#include "json.hh"
-#include "kvtest.hh"
+#include <masstree/all.hh>
 #include "mtclient.hh"
-#include "kvrandom.hh"
 #include "clp.h"
 
 const char *serverip = "127.0.0.1";
