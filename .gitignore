@@ -58,3 +58,15 @@ notebook-mttest.json
 build
 scripts
 foo*
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+compile_commands.json
+/build-*/

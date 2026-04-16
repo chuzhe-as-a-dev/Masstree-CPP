@@ -10,44 +10,64 @@ results.
 * `MTDIR`: this directory
 * `MTDIR/doc`: Masstree algorithm specification
 
-## Installation
+## Building
 
-Masstree is tested on Debian, Ubuntu and Mac OS X. To build from
-source:
+Masstree is built with CMake (minimum 3.20) and a C++20 compiler (clang
+or gcc). It is tested on Debian, Ubuntu, and macOS on both x86_64 and
+aarch64.
 
-    $ ./bootstrap.sh
-    $ bash configure-all.sh
-    $ make -C build/fullatomic-debug
+```shell
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
 
-`configure-all.sh` performs an out-of-root build and creates one or more
-build directories under `build/`, such as `build/fullatomic-debug` and
-`build/fullatomic-release`. The exact directories depend on the
-`VARIANTS` and `CONFIGS` arrays in `configure-all.sh`.
+That produces `build/libmasstree.a` plus the test/demo programs
+(`mttest`, `mtd`, `mtclient`, `scantest`, `jsontest`, `msgpacktest`,
+`test_atomics`, `test_string`, `unit-mt`). The test programs are only
+built when `masstree-cpp` is the top-level project; when consumed from a
+parent project via `add_subdirectory()` they are off by default and can
+be turned on with `-DMASSTREE_BUILD_TESTS=ON`.
 
-If you configure both debug and release builds, you can build the
-release configuration with:
+### Consuming from another CMake project
 
-    $ make -C build/fullatomic-release
+```cmake
+add_subdirectory(path/to/masstree-cpp)
+target_link_libraries(my_target PRIVATE masstree::masstree)
+```
 
-For performance measurements, prefer the release build.
+The library target propagates:
 
-Masstree needs a fast malloc, and can link with jemalloc, Google’s
-tcmalloc, Hoard, or our own Flow allocator. It will normally choose
-jemalloc or tcmalloc, if it finds them. To use a specific memory
-allocator:
+- include dirs (source root + `include/` for the `<masstree/all.hh>` umbrella
+  header + generated `config.h`),
+- a `-include config.h` compile flag so every TU that uses masstree sees
+  the same `HAVE_*` / `ENABLE_*` settings,
+- `Threads::Threads`, plus (when enabled) libnuma / jemalloc / tcmalloc.
 
-Pass the desired option through the `configure` invocation inside
-`configure-all.sh`, for example:
+### Configurable options
 
-    ../../configure CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
-        --with-malloc=<jemalloc|tcmalloc|flow|hoard> $CONFIGFLAGS
+| Option | Default | Meaning |
+| :-- | :-- | :-- |
+| `MASSTREE_BUILD_TESTS` | `ON` standalone, `OFF` when nested | Build mttest/mtd/mtclient/etc. |
+| `MASSTREE_ENABLE_NUMA` | `OFF` | Link against libnuma. |
+| `MASSTREE_ENABLE_JEMALLOC` | `OFF` | Link against jemalloc. |
+| `MASSTREE_ENABLE_TCMALLOC` | `OFF` | Link against gperftools tcmalloc. |
+| `MASSTREE_ENABLE_MEMDEBUG` | `OFF` | Enable memory-debugging hooks. |
+| `MASSTREE_ENABLE_SUPERPAGE` | `OFF` | Enable hugepage allocation. |
+| `MASSTREE_NODEVERSION_IMPL` | `atomic` | `handrolled` / `atomicallfences` / `atomic`. |
+| `MASSTREE_STRINGBAG_IMPL` | `atomic` | `original` / `atomic` / `atomicref`. |
+| `MASSTREE_RELAX_FENCE` | `pause` | `pause` / `schedyield` / `none`. |
+| `MASSTREE_ATOMIC_FENCE_DEFAULT` | `thread` | `thread` (safe on all architectures) / `signal` (matches the old autoconf default; only correct on strongly-ordered archs like x86). |
+| `MASSTREE_ROW_TYPE` | `bag` | Default row type used by mttest/mtd/mtclient. |
+| `MASSTREE_MAXKEYLEN` | `255` | Maximum key length in bytes. |
+| `MASSTREE_CACHE_LINE_SIZE` | `64` | Assumed cache-line size. |
 
-Flow is our re-implementation of
-[Streamflow](http://people.cs.vt.edu/~scschnei/streamflow/) allocator,
-and may be open-sourced in future.
+Assertion family (`ENABLE_ASSERTIONS`, `ENABLE_PRECONDITIONS`,
+`ENABLE_INVARIANTS`) follows `CMAKE_BUILD_TYPE` — on in Debug /
+RelWithDebInfo, off in Release / MinSizeRel.
 
-See `./configure --help` for other configure options you may want to add
-to that command in `configure-all.sh`.
+The legacy autoconf flow (`./bootstrap.sh && bash configure-all.sh`) is
+preserved in tree for reference but is no longer the recommended entry
+point.
 
 ## Testing
 
