@@ -50,7 +50,7 @@ class query {
     typedef lcdf::Json Json;
 
     template <typename T>
-    void run_get(T& table, Json& req, threadinfo& ti);
+    bool run_get(T& table, Json& req, threadinfo& ti);
     template <typename T>
     bool run_get1(T& table, Str key, int col, Str& value, threadinfo& ti);
 
@@ -122,7 +122,7 @@ void query<R>::emit_fields1(const R* value, Json& req, threadinfo& ti) {
 
 
 template <typename R> template <typename T>
-void query<R>::run_get(T& table, Json& req, threadinfo& ti) {
+bool query<R>::run_get(T& table, Json& req, threadinfo& ti) {
     typename T::unlocked_cursor_type lp(table, req[2].as_s());
     bool found = lp.find_unlocked(ti);
     if (found && row_is_marker(lp.value()))
@@ -135,6 +135,7 @@ void query<R>::run_get(T& table, Json& req, threadinfo& ti) {
         req.resize(2);
         emit_fields(lp.value(), req, ti);
     }
+    return found;
 }
 
 template <typename R> template <typename T>
